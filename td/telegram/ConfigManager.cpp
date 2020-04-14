@@ -141,6 +141,18 @@ Result<int32> HttpDate::parse_http_date(std::string slice) {
 }
 
 Result<SimpleConfig> decode_config(Slice input) {
+#ifdef PATCH_BY_NEBULACHAT
+  static auto rsa = RSA::from_pem(
+                        "-----BEGIN RSA PUBLIC KEY-----\n"
+                        "MIIBCgKCAQEAvKLEOWTzt9Hn3/9Kdp/RdHcEhzmd8xXeLSpHIIzaXTLJDw8BhJy1\n"
+                        "jR/iqeG8Je5yrtVabqMSkA6ltIpgylH///FojMsX1BHu4EPYOXQgB0qOi6kr08iX\n"
+                        "ZIH9/iOPQOWDsL+Lt8gDG0xBy+sPe/2ZHdzKMjX6O9B4sOsxjFrk5qDoWDrioJor\n"
+                        "AJ7eFAfPpOBf2w73ohXudSrJE0lbQ8pCWNpMY8cB9i8r+WBitcvouLDAvmtnTX7a\n"
+                        "khoDzmKgpJBYliAY4qA73v7u5UIepE8QgV0jCOhxJCPubP8dg+/PlLLVKyxU5Cdi\n"
+                        "QtZj2EMy4s9xlNKzX8XezE0MHEa6bQpnFwIDAQAB\n"
+                        "-----END RSA PUBLIC KEY-----")
+                        .move_as_ok();
+#else
   static auto rsa = RSA::from_pem(
                         "-----BEGIN RSA PUBLIC KEY-----\n"
                         "MIIBCgKCAQEAyr+18Rex2ohtVy8sroGP\n"
@@ -152,6 +164,7 @@ Result<SimpleConfig> decode_config(Slice input) {
                         "xwIDAQAB\n"
                         "-----END RSA PUBLIC KEY-----\n")
                         .move_as_ok();
+#endif
 
   if (input.size() < 344 || input.size() > 1024) {
     return Status::Error(PSLICE() << "Invalid " << tag("length", input.size()));
@@ -777,6 +790,7 @@ class ConfigRecoverer : public Actor {
       simple_config_ = DcOptions();
       update_dc_options();
     }
+
     bool need_simple_config = has_connecting_problem && !is_valid_simple_config && simple_config_query_.empty();
     bool has_dc_options = !dc_options_.dc_options.empty();
     bool is_valid_full_config = !check_timeout(Timestamp::at(full_config_expires_at_));
@@ -786,6 +800,7 @@ class ConfigRecoverer : public Actor {
     if (need_simple_config) {
       ref_cnt_++;
       VLOG(config_recoverer) << "ASK SIMPLE CONFIG";
+#ifndef PATCH_BY_NEBULACHAT
       auto promise =
           PromiseCreator::lambda([actor_id = actor_shared(this)](Result<SimpleConfigResult> r_simple_config) {
             send_closure(actor_id, &ConfigRecoverer::on_simple_config, std::move(r_simple_config), false);
@@ -809,18 +824,21 @@ class ConfigRecoverer : public Actor {
       }();
       simple_config_query_ =
           get_simple_config(std::move(promise), &G()->shared_config(), G()->is_test_dc(), G()->get_gc_scheduler_id());
+#endif
       simple_config_turn_++;
     }
 
     if (need_full_config) {
       ref_cnt_++;
       VLOG(config_recoverer) << "ASK FULL CONFIG";
+#ifndef PATCH_BY_NEBULACHAT
       full_config_query_ =
           get_full_config(dc_options_.dc_options[dc_options_i_],
                           PromiseCreator::lambda([actor_id = actor_id(this)](Result<FullConfig> r_full_config) {
                             send_closure(actor_id, &ConfigRecoverer::on_full_config, std::move(r_full_config), false);
                           }),
                           actor_shared(this));
+#endif
       dc_options_i_ = (dc_options_i_ + 1) % dc_options_.dc_options.size();
     }
 
@@ -1147,9 +1165,13 @@ void ConfigManager::process_config(tl_object_ptr<telegram_api::config> config) {
   auto reload_in = clamp(config->expires_ - config->date_, 60, 86400);
   save_config_expire(Timestamp::in(reload_in));
   reload_in -= Random::fast(0, reload_in / 5);
+
+#ifndef PATCH_BY_NEBULACHAT
   if (!is_from_main_dc) {
     reload_in = 0;
   }
+#endif
+
   expire_time_ = Timestamp::in(reload_in);
   set_timeout_at(expire_time_.at());
   LOG_IF(ERROR, config->test_mode_ != G()->is_test_dc()) << "Wrong parameter is_test";

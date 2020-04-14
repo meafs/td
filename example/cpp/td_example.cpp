@@ -231,7 +231,9 @@ class TdExample {
               are_authorized_ = false;
               std::cout << "Logging out" << std::endl;
             },
-            [this](td_api::authorizationStateClosing &) { std::cout << "Closing" << std::endl; },
+            [this](td_api::authorizationStateClosing &) {
+              std::cout << "Closing" << std::endl;
+            },
             [this](td_api::authorizationStateClosed &) {
               are_authorized_ = false;
               need_restart_ = true;

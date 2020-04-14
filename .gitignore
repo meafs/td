@@ -6,3 +6,4 @@ auto/
 db_backup
 *.pyc
 docs/
+example/web/build-tdlib-mac.sh

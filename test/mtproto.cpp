@@ -237,10 +237,13 @@ class TestPingActor : public Actor {
 
 static IPAddress get_default_ip_address() {
   IPAddress ip_address;
+#ifdef PATCH_BY_NEBULACHAT
+#else
 #if TD_EMSCRIPTEN
   ip_address.init_host_port("venus.web.telegram.org/apiws", 443).ensure();
 #else
   ip_address.init_ipv4_port("149.154.167.40", 80).ensure();
+#endif
 #endif
   return ip_address;
 }

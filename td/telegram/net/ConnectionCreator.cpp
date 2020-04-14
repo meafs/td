@@ -1182,7 +1182,48 @@ DcOptions ConnectionCreator::get_default_dc_options(bool is_test) {
       }
     }
   };
+
+#ifdef PATCH_BY_NEBULACHAT
+  vector<int> ports = {12443, 18801, 15222};
+
+#if TD_EMSCRIPTEN
+  if (is_test) {
+    add_ip_ports(1, {"pluto.web.nebula.chat/apiws_test"}, {10443}, HostType::Url);
+    add_ip_ports(2, {"venus.web.nebula.chat/apiws_test"}, {10443}, HostType::Url);
+    add_ip_ports(3, {"aurora.web.nebula.chat/apiws_test"}, {10443}, HostType::Url);
+  } else {
+    add_ip_ports(1, {"pluto.web.nebula.chat/apiws"}, {10443}, HostType::Url);
+    add_ip_ports(2, {"venus.web.nebula.chat/apiws"}, {10443}, HostType::Url);
+    add_ip_ports(3, {"aurora.web.nebula.chat/apiws"}, {10443}, HostType::Url);
+    add_ip_ports(4, {"vesta.web.nebula.chat/apiws"}, {10443}, HostType::Url);
+    add_ip_ports(5, {"flora.web.nebula.chat/apiws"}, {10443}, HostType::Url);
+  }
+#else
+  if (is_test) {
+    add_ip_ports(1, {"47.103.102.219"}, ports);
+    add_ip_ports(2, {"47.103.102.219"}, ports);
+    add_ip_ports(3, {"47.103.102.219"}, ports);
+
+    // add_ip_ports(1, {"2001:b28:f23d:f001::e"}, ports, HostType::IPv6);
+    // add_ip_ports(2, {"2001:67c:4e8:f002::e"}, ports, HostType::IPv6);
+    // add_ip_ports(3, {"2001:b28:f23d:f003::e"}, ports, HostType::IPv6);
+  } else {
+    add_ip_ports(1, {"47.103.102.219"}, ports);
+    add_ip_ports(2, {"47.103.102.219"}, ports);
+    add_ip_ports(3, {"47.103.102.219"}, ports);
+    add_ip_ports(4, {"47.103.102.219"}, ports);
+    add_ip_ports(5, {"47.103.102.219"}, ports);
+
+    // add_ip_ports(1, {"2001:b28:f23d:f001::a"}, ports, HostType::IPv6);
+    // add_ip_ports(2, {"2001:67c:4e8:f002::a"}, ports, HostType::IPv6);
+    // add_ip_ports(3, {"2001:b28:f23d:f003::a"}, ports, HostType::IPv6);
+    // add_ip_ports(4, {"2001:67c:4e8:f004::a"}, ports, HostType::IPv6);
+    // add_ip_ports(5, {"2001:b28:f23f:f005::a"}, ports, HostType::IPv6);
+  }
+#endif
+#else
   vector<int> ports = {443, 80, 5222};
+
 #if TD_EMSCRIPTEN
   if (is_test) {
     add_ip_ports(1, {"pluto.web.telegram.org/apiws_test"}, {443}, HostType::Url);
@@ -1217,6 +1258,7 @@ DcOptions ConnectionCreator::get_default_dc_options(bool is_test) {
     add_ip_ports(4, {"2001:67c:4e8:f004::a"}, ports, HostType::IPv6);
     add_ip_ports(5, {"2001:b28:f23f:f005::a"}, ports, HostType::IPv6);
   }
+#endif
 #endif
   return res;
 }

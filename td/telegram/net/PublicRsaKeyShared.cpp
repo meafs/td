@@ -29,6 +29,76 @@ PublicRsaKeyShared::PublicRsaKeyShared(DcId dc_id, bool is_test) : dc_id_(dc_id)
     }
   };
 
+#ifdef PATCH_BY_NEBULACHAT
+    if (is_test) {
+    add_pem(
+        "-----BEGIN RSA PUBLIC KEY-----\n"
+        "MIIBCgKCAQEAvKLEOWTzt9Hn3/9Kdp/RdHcEhzmd8xXeLSpHIIzaXTLJDw8BhJy1\n"
+        "jR/iqeG8Je5yrtVabqMSkA6ltIpgylH///FojMsX1BHu4EPYOXQgB0qOi6kr08iX\n"
+        "ZIH9/iOPQOWDsL+Lt8gDG0xBy+sPe/2ZHdzKMjX6O9B4sOsxjFrk5qDoWDrioJor\n"
+        "AJ7eFAfPpOBf2w73ohXudSrJE0lbQ8pCWNpMY8cB9i8r+WBitcvouLDAvmtnTX7a\n"
+        "khoDzmKgpJBYliAY4qA73v7u5UIepE8QgV0jCOhxJCPubP8dg+/PlLLVKyxU5Cdi\n"
+        "QtZj2EMy4s9xlNKzX8XezE0MHEa6bQpnFwIDAQAB\n"
+        "-----END RSA PUBLIC KEY-----");
+    return;
+  }
+
+  //old_key
+  add_pem(
+        "-----BEGIN RSA PUBLIC KEY-----\n"
+        "MIIBCgKCAQEAvKLEOWTzt9Hn3/9Kdp/RdHcEhzmd8xXeLSpHIIzaXTLJDw8BhJy1\n"
+        "jR/iqeG8Je5yrtVabqMSkA6ltIpgylH///FojMsX1BHu4EPYOXQgB0qOi6kr08iX\n"
+        "ZIH9/iOPQOWDsL+Lt8gDG0xBy+sPe/2ZHdzKMjX6O9B4sOsxjFrk5qDoWDrioJor\n"
+        "AJ7eFAfPpOBf2w73ohXudSrJE0lbQ8pCWNpMY8cB9i8r+WBitcvouLDAvmtnTX7a\n"
+        "khoDzmKgpJBYliAY4qA73v7u5UIepE8QgV0jCOhxJCPubP8dg+/PlLLVKyxU5Cdi\n"
+        "QtZj2EMy4s9xlNKzX8XezE0MHEa6bQpnFwIDAQAB\n"
+        "-----END RSA PUBLIC KEY-----");
+
+  // a35e0b92d00f9b61c351ce30526cb855649b12a35e01fe39b5b315e81b515779  key1.pub
+  add_pem(
+        "-----BEGIN RSA PUBLIC KEY-----\n"
+        "MIIBCgKCAQEAvKLEOWTzt9Hn3/9Kdp/RdHcEhzmd8xXeLSpHIIzaXTLJDw8BhJy1\n"
+        "jR/iqeG8Je5yrtVabqMSkA6ltIpgylH///FojMsX1BHu4EPYOXQgB0qOi6kr08iX\n"
+        "ZIH9/iOPQOWDsL+Lt8gDG0xBy+sPe/2ZHdzKMjX6O9B4sOsxjFrk5qDoWDrioJor\n"
+        "AJ7eFAfPpOBf2w73ohXudSrJE0lbQ8pCWNpMY8cB9i8r+WBitcvouLDAvmtnTX7a\n"
+        "khoDzmKgpJBYliAY4qA73v7u5UIepE8QgV0jCOhxJCPubP8dg+/PlLLVKyxU5Cdi\n"
+        "QtZj2EMy4s9xlNKzX8XezE0MHEa6bQpnFwIDAQAB\n"
+        "-----END RSA PUBLIC KEY-----");
+
+  // f1c346bd6de0c3365658e0740de42372e51262099d47ee097c3ff1e238ebf985  key2.pub
+  add_pem(
+        "-----BEGIN RSA PUBLIC KEY-----\n"
+        "MIIBCgKCAQEAvKLEOWTzt9Hn3/9Kdp/RdHcEhzmd8xXeLSpHIIzaXTLJDw8BhJy1\n"
+        "jR/iqeG8Je5yrtVabqMSkA6ltIpgylH///FojMsX1BHu4EPYOXQgB0qOi6kr08iX\n"
+        "ZIH9/iOPQOWDsL+Lt8gDG0xBy+sPe/2ZHdzKMjX6O9B4sOsxjFrk5qDoWDrioJor\n"
+        "AJ7eFAfPpOBf2w73ohXudSrJE0lbQ8pCWNpMY8cB9i8r+WBitcvouLDAvmtnTX7a\n"
+        "khoDzmKgpJBYliAY4qA73v7u5UIepE8QgV0jCOhxJCPubP8dg+/PlLLVKyxU5Cdi\n"
+        "QtZj2EMy4s9xlNKzX8XezE0MHEa6bQpnFwIDAQAB\n"
+        "-----END RSA PUBLIC KEY-----");
+
+  // 129e129a464a2b515f579fd568f5579e8a6ea2832a362b07f282a7c271acfead  key3.pub
+  add_pem(
+        "-----BEGIN RSA PUBLIC KEY-----\n"
+        "MIIBCgKCAQEAvKLEOWTzt9Hn3/9Kdp/RdHcEhzmd8xXeLSpHIIzaXTLJDw8BhJy1\n"
+        "jR/iqeG8Je5yrtVabqMSkA6ltIpgylH///FojMsX1BHu4EPYOXQgB0qOi6kr08iX\n"
+        "ZIH9/iOPQOWDsL+Lt8gDG0xBy+sPe/2ZHdzKMjX6O9B4sOsxjFrk5qDoWDrioJor\n"
+        "AJ7eFAfPpOBf2w73ohXudSrJE0lbQ8pCWNpMY8cB9i8r+WBitcvouLDAvmtnTX7a\n"
+        "khoDzmKgpJBYliAY4qA73v7u5UIepE8QgV0jCOhxJCPubP8dg+/PlLLVKyxU5Cdi\n"
+        "QtZj2EMy4s9xlNKzX8XezE0MHEa6bQpnFwIDAQAB\n"
+        "-----END RSA PUBLIC KEY-----");
+
+  // f9e47d59fbe0fa338ac8c5085201a0dd58dfd88f44abb16756ee5e9d50d52949  key4.pub
+  add_pem(
+        "-----BEGIN RSA PUBLIC KEY-----\n"
+        "MIIBCgKCAQEAvKLEOWTzt9Hn3/9Kdp/RdHcEhzmd8xXeLSpHIIzaXTLJDw8BhJy1\n"
+        "jR/iqeG8Je5yrtVabqMSkA6ltIpgylH///FojMsX1BHu4EPYOXQgB0qOi6kr08iX\n"
+        "ZIH9/iOPQOWDsL+Lt8gDG0xBy+sPe/2ZHdzKMjX6O9B4sOsxjFrk5qDoWDrioJor\n"
+        "AJ7eFAfPpOBf2w73ohXudSrJE0lbQ8pCWNpMY8cB9i8r+WBitcvouLDAvmtnTX7a\n"
+        "khoDzmKgpJBYliAY4qA73v7u5UIepE8QgV0jCOhxJCPubP8dg+/PlLLVKyxU5Cdi\n"
+        "QtZj2EMy4s9xlNKzX8XezE0MHEa6bQpnFwIDAQAB\n"
+        "-----END RSA PUBLIC KEY-----");
+}
+#else
   if (is_test) {
     add_pem(
         "-----BEGIN RSA PUBLIC KEY-----\n"
@@ -101,6 +171,7 @@ PublicRsaKeyShared::PublicRsaKeyShared(DcId dc_id, bool is_test) : dc_id_(dc_id)
       "AQIDAQAB\n"
       "-----END RSA PUBLIC KEY-----\n");
 }
+#endif
 
 void PublicRsaKeyShared::add_rsa(RSA rsa) {
   auto lock = rw_mutex_.lock_write();
