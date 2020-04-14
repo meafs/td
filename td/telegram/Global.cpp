@@ -102,6 +102,9 @@ Status Global::init(const TdParameters &parameters, ActorId<Td> td, unique_ptr<T
     ServerTimeDiff saved_diff;
     unserialize(saved_diff, saved_diff_str).ensure();
 
+    saved_diff_ = saved_diff.diff;
+    saved_system_time_ = saved_diff.system_time;
+
     double diff = saved_diff.diff + default_time_difference;
     if (saved_diff.system_time > system_time) {
       double time_backwards_fix = saved_diff.system_time - system_time;
@@ -118,6 +121,8 @@ Status Global::init(const TdParameters &parameters, ActorId<Td> td, unique_ptr<T
                      << tag("saved_system_time", saved_diff.system_time) << tag("system_time", system_time);
         diff -= time_forward_fix;
       }
+    } else if (saved_diff.diff >= 1500000000 && system_time >= 1500000000) {  // only for saved_diff.system_time == 0
+      diff = default_time_difference;
     }
     LOG(DEBUG) << "LOAD: " << tag("server_time_difference", diff);
     server_time_difference_ = diff;
@@ -129,8 +134,10 @@ Status Global::init(const TdParameters &parameters, ActorId<Td> td, unique_ptr<T
   return Status::OK();
 }
 
-int32 Global::to_unix_time(double server_time) {
-  LOG_CHECK(1.0 <= server_time && server_time <= 2140000000.0) << server_time << " " << Clocks::system();
+int32 Global::to_unix_time(double server_time) const {
+  LOG_CHECK(1.0 <= server_time && server_time <= 2140000000.0)
+      << server_time << " " << Clocks::system() << " " << is_server_time_reliable() << " "
+      << get_server_time_difference() << " " << Time::now() << saved_diff_ << " " << saved_system_time_;
   return static_cast<int32>(server_time);
 }
 

@@ -47,9 +47,9 @@ class PollManager : public Actor {
   PollId create_poll(string &&question, vector<string> &&options, bool is_anonymous, bool allow_multiple_answers,
                      bool is_quiz, int32 correct_option_id, bool is_closed);
 
-  void register_poll(PollId poll_id, FullMessageId full_message_id);
+  void register_poll(PollId poll_id, FullMessageId full_message_id, const char *source);
 
-  void unregister_poll(PollId poll_id, FullMessageId full_message_id);
+  void unregister_poll(PollId poll_id, FullMessageId full_message_id, const char *source);
 
   bool get_poll_is_closed(PollId poll_id) const;
 
@@ -112,6 +112,7 @@ class PollManager : public Actor {
     bool allow_multiple_answers = false;
     bool is_quiz = false;
     bool is_closed = false;
+    mutable bool was_saved = false;
 
     template <class StorerT>
     void store(StorerT &storer) const;

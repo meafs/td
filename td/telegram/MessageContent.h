@@ -135,6 +135,8 @@ bool get_message_content_poll_is_closed(const Td *td, const MessageContent *cont
 
 bool get_message_content_poll_is_anonymous(const Td *td, const MessageContent *content);
 
+bool has_message_content_web_page(const MessageContent *content);
+
 void remove_message_content_web_page(MessageContent *content);
 
 void set_message_content_poll_answer(Td *td, const MessageContent *content, FullMessageId full_message_id,
@@ -153,12 +155,13 @@ void merge_message_contents(Td *td, const MessageContent *old_content, MessageCo
 
 bool merge_message_content_file_id(Td *td, MessageContent *message_content, FileId new_file_id);
 
-void register_message_content(Td *td, const MessageContent *content, FullMessageId full_message_id);
+void register_message_content(Td *td, const MessageContent *content, FullMessageId full_message_id, const char *source);
 
 void reregister_message_content(Td *td, const MessageContent *old_content, const MessageContent *new_content,
-                                FullMessageId full_message_id);
+                                FullMessageId full_message_id, const char *source);
 
-void unregister_message_content(Td *td, const MessageContent *content, FullMessageId full_message_id);
+void unregister_message_content(Td *td, const MessageContent *content, FullMessageId full_message_id,
+                                const char *source);
 
 unique_ptr<MessageContent> get_secret_message_content(
     Td *td, string message_text, tl_object_ptr<telegram_api::encryptedFile> file,

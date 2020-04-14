@@ -21,6 +21,7 @@
 #include "td/telegram/files/FileSourceId.h"
 #include "td/telegram/Location.h"
 #include "td/telegram/MessageId.h"
+#include "td/telegram/net/DcId.h"
 #include "td/telegram/Photo.h"
 #include "td/telegram/PublicDialogType.h"
 #include "td/telegram/QueryCombiner.h"
@@ -163,6 +164,7 @@ class ContactsManager : public Actor {
   void on_get_chat_full(tl_object_ptr<telegram_api::ChatFull> &&chat_full, Promise<Unit> &&promise);
 
   void on_update_profile_success(int32 flags, const string &first_name, const string &last_name, const string &about);
+  void on_set_bot_commands_success(vector<std::pair<string, string>> &&commands);
 
   void on_update_user_name(UserId user_id, string &&first_name, string &&last_name, string &&username);
   void on_update_user_phone_number(UserId user_id, string &&phone_number);
@@ -329,6 +331,8 @@ class ContactsManager : public Actor {
 
   void set_username(const string &username, Promise<Unit> &&promise);
 
+  void set_commands(vector<td_api::object_ptr<td_api::botCommand>> &&commands, Promise<Unit> &&promise);
+
   void set_chat_description(ChatId chat_id, const string &description, Promise<Unit> &&promise);
 
   void set_channel_username(ChannelId channel_id, const string &username, Promise<Unit> &&promise);
@@ -352,6 +356,12 @@ class ContactsManager : public Actor {
                            Promise<Unit> &&promise);
 
   void delete_channel(ChannelId channel_id, Promise<Unit> &&promise);
+
+  void get_channel_statistics(DialogId dialog_id, bool is_dark,
+                              Promise<td_api::object_ptr<td_api::chatStatistics>> &&promise);
+
+  void load_statistics_graph(DialogId dialog_id, const string &token, int64 x,
+                             Promise<td_api::object_ptr<td_api::StatisticsGraph>> &&promise);
 
   void add_chat_participant(ChatId chat_id, UserId user_id, int32 forward_limit, Promise<Unit> &&promise);
 
@@ -418,7 +428,7 @@ class ContactsManager : public Actor {
   UserId get_me(Promise<Unit> &&promise);
   bool get_user(UserId user_id, int left_tries, Promise<Unit> &&promise);
   void reload_user(UserId user_id, Promise<Unit> &&promise);
-  bool get_user_full(UserId user_id, Promise<Unit> &&promise);
+  bool get_user_full(UserId user_id, bool force, Promise<Unit> &&promise);
   void reload_user_full(UserId user_id);
 
   std::pair<int32, vector<const Photo *>> get_user_profile_photos(UserId user_id, int32 offset, int32 limit,
@@ -430,7 +440,7 @@ class ContactsManager : public Actor {
   bool have_chat_force(ChatId chat_id);
   bool get_chat(ChatId chat_id, int left_tries, Promise<Unit> &&promise);
   void reload_chat(ChatId chat_id, Promise<Unit> &&promise);
-  bool get_chat_full(ChatId chat_id, Promise<Unit> &&promise);
+  bool get_chat_full(ChatId chat_id, bool force, Promise<Unit> &&promise);
 
   bool get_chat_is_active(ChatId chat_id) const;
   DialogParticipantStatus get_chat_status(ChatId chat_id) const;
@@ -443,7 +453,7 @@ class ContactsManager : public Actor {
   bool have_channel_force(ChannelId channel_id);
   bool get_channel(ChannelId channel_id, int left_tries, Promise<Unit> &&promise);
   void reload_channel(ChannelId chnanel_id, Promise<Unit> &&promise);
-  bool get_channel_full(ChannelId channel_id, Promise<Unit> &&promise);
+  bool get_channel_full(ChannelId channel_id, bool force, Promise<Unit> &&promise);
 
   bool is_channel_public(ChannelId channel_id) const;
 
@@ -528,6 +538,16 @@ class ContactsManager : public Actor {
   void after_get_difference();
 
   void get_current_state(vector<td_api::object_ptr<td_api::Update>> &updates) const;
+
+  static tl_object_ptr<td_api::StatisticsGraph> convert_stats_graph(tl_object_ptr<telegram_api::StatsGraph> obj);
+
+  static double get_percentage_value(double new_value, double old_value);
+
+  static tl_object_ptr<td_api::statisticsValue> convert_stats_absolute_value(
+      const tl_object_ptr<telegram_api::statsAbsValueAndPrev> &obj);
+
+  static tl_object_ptr<td_api::chatStatistics> convert_broadcast_stats(
+      tl_object_ptr<telegram_api::stats_broadcastStats> obj);
 
  private:
   struct User {
@@ -771,6 +791,8 @@ class ContactsManager : public Actor {
 
     DialogLocation location;
 
+    DcId stats_dc_id;
+
     int32 slow_mode_delay = 0;
     int32 slow_mode_next_send_date = 0;
 
@@ -783,7 +805,6 @@ class ContactsManager : public Actor {
     bool can_set_username = false;
     bool can_set_sticker_set = false;
     bool can_set_location = false;
-    bool can_view_statistics = false;
     bool is_all_history_available = true;
 
     bool is_slow_mode_next_send_date_changed = true;
@@ -1069,7 +1090,7 @@ class ContactsManager : public Actor {
   void on_update_user_full_common_chat_count(UserFull *user_full, UserId user_id, int32 common_chat_count);
   void on_update_user_full_need_phone_number_privacy_exception(UserFull *user_full, UserId user_id,
                                                                bool need_phone_number_privacy_exception);
-  void drop_user_photos(UserId user_id, bool is_empty);
+  void drop_user_photos(UserId user_id, bool is_empty, const char *source);
   void drop_user_full(UserId user_id);
 
   void on_set_user_is_blocked_failed(UserId user_id, bool is_blocked, Status error);
@@ -1316,6 +1337,16 @@ class ContactsManager : public Actor {
   void transfer_channel_ownership(ChannelId channel_id, UserId user_id,
                                   tl_object_ptr<telegram_api::InputCheckPasswordSRP> input_check_password,
                                   Promise<Unit> &&promise);
+
+  void get_channel_statistics_dc_id(DialogId dialog_id, Promise<DcId> &&promise);
+
+  void get_channel_statistics_dc_id_impl(ChannelId channel_id, Promise<DcId> &&promise);
+
+  void send_get_broadcast_stats_query(DcId dc_id, ChannelId channel_id, bool is_dark,
+                                      Promise<td_api::object_ptr<td_api::chatStatistics>> &&promise);
+
+  void send_load_async_graph_query(DcId dc_id, string token, int64 x,
+                                   Promise<td_api::object_ptr<td_api::StatisticsGraph>> &&promise);
 
   static void on_user_online_timeout_callback(void *contacts_manager_ptr, int64 user_id_long);
 

@@ -64,8 +64,8 @@ class GetPollResultsQuery : public Td::ResultHandler {
     }
 
     auto message_id = full_message_id.get_message_id().get_server_message_id().get();
-    send_query(G()->net_query_creator().create(
-        create_storer(telegram_api::messages_getPollResults(std::move(input_peer), message_id))));
+    send_query(
+        G()->net_query_creator().create(telegram_api::messages_getPollResults(std::move(input_peer), message_id)));
   }
 
   void on_result(uint64 id, BufferSlice packet) override {
@@ -112,8 +112,8 @@ class GetPollVotersQuery : public Td::ResultHandler {
     }
 
     auto message_id = full_message_id.get_message_id().get_server_message_id().get();
-    send_query(G()->net_query_creator().create(create_storer(telegram_api::messages_getPollVotes(
-        flags, std::move(input_peer), message_id, std::move(option), offset, limit))));
+    send_query(G()->net_query_creator().create(telegram_api::messages_getPollVotes(
+        flags, std::move(input_peer), message_id, std::move(option), offset, limit)));
   }
 
   void on_result(uint64 id, BufferSlice packet) override {
@@ -152,7 +152,7 @@ class SetPollAnswerActor : public NetActorOnce {
 
     auto message_id = full_message_id.get_message_id().get_server_message_id().get();
     auto query = G()->net_query_creator().create(
-        create_storer(telegram_api::messages_sendVote(std::move(input_peer), message_id, std::move(options))));
+        telegram_api::messages_sendVote(std::move(input_peer), message_id, std::move(options)));
     *query_ref = query.get_weak();
     auto sequence_id = -1;
     send_closure(td->messages_manager_->sequence_dispatcher_, &MultiSequenceDispatcher::send_with_callback,
@@ -203,9 +203,9 @@ class StopPollActor : public NetActorOnce {
     poll->flags_ |= telegram_api::poll::CLOSED_MASK;
     auto input_media =
         telegram_api::make_object<telegram_api::inputMediaPoll>(0, std::move(poll), vector<BufferSlice>());
-    auto query = G()->net_query_creator().create(create_storer(telegram_api::messages_editMessage(
+    auto query = G()->net_query_creator().create(telegram_api::messages_editMessage(
         flags, false /*ignored*/, std::move(input_peer), message_id, string(), std::move(input_media),
-        std::move(input_reply_markup), vector<tl_object_ptr<telegram_api::MessageEntity>>(), 0)));
+        std::move(input_reply_markup), vector<tl_object_ptr<telegram_api::MessageEntity>>(), 0));
     auto sequence_id = -1;
     send_closure(td->messages_manager_->sequence_dispatcher_, &MultiSequenceDispatcher::send_with_callback,
                  std::move(query), actor_shared(this), sequence_id);
@@ -314,6 +314,7 @@ string PollManager::get_poll_database_key(PollId poll_id) {
 
 void PollManager::save_poll(const Poll *poll, PollId poll_id) {
   CHECK(!is_local_poll_id(poll_id));
+  poll->was_saved = true;
 
   if (!G()->parameters().use_message_db) {
     return;
@@ -570,7 +571,7 @@ PollId PollManager::create_poll(string &&question, vector<string> &&options, boo
   return poll_id;
 }
 
-void PollManager::register_poll(PollId poll_id, FullMessageId full_message_id) {
+void PollManager::register_poll(PollId poll_id, FullMessageId full_message_id, const char *source) {
   CHECK(have_poll(poll_id));
   if (full_message_id.get_message_id().is_scheduled()) {
     return;
@@ -578,15 +579,15 @@ void PollManager::register_poll(PollId poll_id, FullMessageId full_message_id) {
   if (!full_message_id.get_message_id().is_server()) {
     return;
   }
-  LOG(INFO) << "Register " << poll_id << " from " << full_message_id;
+  LOG(INFO) << "Register " << poll_id << " from " << full_message_id << " from " << source;
   bool is_inserted = poll_messages_[poll_id].insert(full_message_id).second;
-  CHECK(is_inserted);
+  LOG_CHECK(is_inserted) << source << " " << poll_id << " " << full_message_id;
   if (!td_->auth_manager_->is_bot() && !is_local_poll_id(poll_id) && !get_poll_is_closed(poll_id)) {
     update_poll_timeout_.add_timeout_in(poll_id.get(), 0);
   }
 }
 
-void PollManager::unregister_poll(PollId poll_id, FullMessageId full_message_id) {
+void PollManager::unregister_poll(PollId poll_id, FullMessageId full_message_id, const char *source) {
   CHECK(have_poll(poll_id));
   if (full_message_id.get_message_id().is_scheduled()) {
     return;
@@ -594,10 +595,10 @@ void PollManager::unregister_poll(PollId poll_id, FullMessageId full_message_id)
   if (!full_message_id.get_message_id().is_server()) {
     return;
   }
-  LOG(INFO) << "Unregister " << poll_id << " from " << full_message_id;
+  LOG(INFO) << "Unregister " << poll_id << " from " << full_message_id << " from " << source;
   auto &message_ids = poll_messages_[poll_id];
   auto is_deleted = message_ids.erase(full_message_id);
-  CHECK(is_deleted);
+  LOG_CHECK(is_deleted) << source << " " << poll_id << " " << full_message_id;
   if (message_ids.empty()) {
     poll_messages_.erase(poll_id);
     update_poll_timeout_.cancel_timeout(poll_id.get());
@@ -788,6 +789,10 @@ void PollManager::on_set_poll_answer(PollId poll_id, uint64 generation,
   auto promises = std::move(pending_answer.promises_);
   pending_answers_.erase(it);
 
+  auto poll = get_poll(poll_id);
+  if (poll != nullptr) {
+    poll->was_saved = false;
+  }
   if (result.is_ok()) {
     td_->updates_manager_->on_get_updates(result.move_as_ok());
 
@@ -798,6 +803,17 @@ void PollManager::on_set_poll_answer(PollId poll_id, uint64 generation,
     for (auto &promise : promises) {
       promise.set_error(result.error().clone());
     }
+  }
+  if (poll != nullptr && !poll->was_saved) {
+    // no updates was sent during updates processing, so send them
+    // poll wasn't changed, so there is no reason to actually save it
+    if (!poll->is_closed) {
+      LOG(INFO) << "Schedule updating of " << poll_id << " soon";
+      update_poll_timeout_.set_timeout_in(poll_id.get(), 0.0);
+    }
+
+    notify_on_poll_update(poll_id);
+    poll->was_saved = true;
   }
 }
 
@@ -972,6 +988,10 @@ void PollManager::on_get_poll_voters(PollId poll_id, int32 option_id, int32 limi
   voters.voter_user_ids.insert(voters.voter_user_ids.end(), user_ids.begin(), user_ids.end());
   if (static_cast<int32>(user_ids.size()) > limit) {
     user_ids.resize(limit);
+  }
+  if (voters.next_offset.empty() && narrow_cast<int32>(voters.voter_user_ids.size()) != vote_list->count_) {
+    // invalidate_poll_option_voters(poll, poll_id, option_id);
+    voters.was_invalidated = true;
   }
 
   for (auto &promise : promises) {
